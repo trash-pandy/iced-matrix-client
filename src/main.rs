@@ -10,6 +10,8 @@ mod worker;
 
 use iced::{Element, Executor, Font, Program, Renderer, Theme, window};
 
+use crate::styling::APP_THEME;
+
 fn main() -> Result<(), iced_winit::Error> {
     tracing_subscriber::fmt::fmt()
         .with_env_filter("iced_wgpu=error,iced_matrix_client=debug")
@@ -30,7 +32,7 @@ impl Program for IcedMatrixClient {
     type Theme = Theme;
 
     fn theme(&self, _state: &Self::State, _window: window::Id) -> Option<Self::Theme> {
-        Some(Theme::TokyoNightStorm)
+        Some(APP_THEME)
     }
 
     fn name() -> &'static str {

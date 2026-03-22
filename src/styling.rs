@@ -1,5 +1,7 @@
 use iced::widget::{column, text};
-use iced::{Element, Font, Pixels};
+use iced::{Element, Font, Pixels, Theme};
+
+pub const APP_THEME: Theme = Theme::TokyoNightStorm;
 
 pub const FONT_BOLD: Font = Font {
     family: iced::font::Family::Name("Ubuntu Sans"),

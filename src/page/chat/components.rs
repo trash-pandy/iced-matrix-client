@@ -1,8 +1,10 @@
 use std::string::ToString;
 
 use iced::Length::Fill;
+use iced::widget::text::Wrapping;
 use iced::widget::{
-    Column, button, column, container, image, rule, scrollable, space, text, text_input, tooltip,
+    Column, button, column, container, image, markdown, rule, scrollable, space, text, text_input,
+    tooltip,
 };
 use iced::{Element, Pixels, Theme};
 use itertools::Itertools;
@@ -11,8 +13,8 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use super::{Message, Page};
 use crate::extensions::ColumnExt;
-use crate::styling::{FONT_BOLD, SPACING_LARGE, SPACING_MEDIUM, SPACING_SMALL};
-use crate::worker::messages::MessageContent;
+use crate::page::chat::message::RenderedMessage;
+use crate::styling::{APP_THEME, FONT_BOLD, SPACING_LARGE, SPACING_MEDIUM, SPACING_SMALL};
 
 const ROOM_IMAGE_SIZE: f32 = 36.0;
 const CHANNEL_LIST_WIDTH: Pixels = Pixels(240.0);
@@ -61,7 +63,7 @@ pub fn channel_list(page: &Page) -> Element<'_, Message> {
                         .filter_map(|room| page.client.get_room(room))
                         .sorted_by_key(|room| room.room_id().to_owned())
                         .map(|room| {
-                            button(text(room_name(&room)).wrapping(text::Wrapping::WordOrGlyph))
+                            button(text(room_name(&room)).wrapping(Wrapping::WordOrGlyph))
                                 .style(button::subtle)
                                 .width(Fill)
                                 .on_press(Message::OpenRoom(room.room_id().to_owned()))
@@ -97,11 +99,7 @@ pub fn channel_list(page: &Page) -> Element<'_, Message> {
 
 pub fn room_pane(page: &Page) -> Element<'_, Message> {
     Column::new()
-        .push(
-            text("room description")
-                .wrapping(text::Wrapping::None)
-                .center(),
-        )
+        .push(text("room description").wrapping(Wrapping::None).center())
         .push(rule::horizontal(SPACING_SMALL))
         .push(
             scrollable(messages_pane(page))
@@ -134,16 +132,10 @@ pub fn messages_pane(page: &Page) -> Element<'_, Message> {
     )
 }
 
-pub fn message(msg: &MessageContent) -> Element<'_, Message> {
+pub fn message(msg: &RenderedMessage) -> Element<'_, Message> {
     column([
-        text(
-            msg.sender
-                .as_ref()
-                .map_or_else(|| "# system".to_owned(), ToString::to_string),
-        )
-        .font(FONT_BOLD)
-        .into(),
-        text(msg.message_content.clone()).into(),
+        text(msg.sender.clone()).font(FONT_BOLD).into(),
+        markdown::view(&msg.content, APP_THEME).map(Message::UrlClicked),
     ])
     .into()
 }

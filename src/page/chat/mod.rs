@@ -1,4 +1,5 @@
 mod components;
+mod message;
 
 use std::collections::HashMap;
 
@@ -8,6 +9,7 @@ use matrix_sdk::ruma::OwnedRoomId;
 
 use crate::app::ViewLike;
 use crate::page::PageMessage;
+use crate::page::chat::message::{RenderedMessage, render_message_content};
 use crate::tasks::get_space_rooms;
 use crate::util::Smuggle;
 use crate::worker::{self, WorkerSubscription, messages, sliding_sync, verification};
@@ -31,6 +33,7 @@ pub enum Message {
         space: OwnedRoomId,
         room: OwnedRoomId,
     },
+    UrlClicked(String),
 }
 
 #[derive(Debug, Clone)]
@@ -45,7 +48,7 @@ pub struct Page {
     messages_worker: messages::Worker,
 
     synced: HashMap<OwnedRoomId, bool>,
-    messages: HashMap<OwnedRoomId, Vec<worker::messages::MessageContent>>,
+    messages: HashMap<OwnedRoomId, Vec<RenderedMessage>>,
 
     text: String,
     space_rooms: Vec<OwnedRoomId>,
@@ -143,17 +146,20 @@ impl ViewLike<PageMessage> for Page {
             Message::MessagesUpdate(response) => {
                 match response {
                     messages::Response::Messages(room_id, messages) => {
-                        self.messages.entry(room_id).insert_entry(messages);
+                        self.messages
+                            .entry(room_id)
+                            .insert_entry(messages.iter().map(render_message_content).collect());
                     }
-                    messages::Response::NewMessage(room_id, message_content) => {
+                    messages::Response::NewMessage(room_id, msg) => {
                         self.messages
                             .entry(room_id)
                             .or_default()
-                            .push(message_content);
+                            .push(render_message_content(&msg));
                     }
                 }
                 Task::none()
             }
+            Message::UrlClicked(_url) => todo!(),
         }
     }
 
