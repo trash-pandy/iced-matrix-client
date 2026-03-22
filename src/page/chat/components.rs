@@ -5,12 +5,13 @@ use iced::widget::{
     Column, button, column, container, image, rule, scrollable, space, text, text_input, tooltip,
 };
 use iced::{Element, Pixels, Theme};
+use itertools::Itertools;
 use matrix_sdk::Room;
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::{Message, Page};
-use crate::styling::{FONT_BOLD, SPACING_LARGE, SPACING_MEDIUM, SPACING_SMALL};
 use crate::extensions::ColumnExt;
+use crate::styling::{FONT_BOLD, SPACING_LARGE, SPACING_MEDIUM, SPACING_SMALL};
 use crate::worker::messages::MessageContent;
 
 const ROOM_IMAGE_SIZE: f32 = 36.0;
@@ -19,10 +20,12 @@ const CHANNEL_LIST_WIDTH: Pixels = Pixels(240.0);
 pub fn space_list(page: &Page) -> Element<'_, Message> {
     container(
         scrollable(
-            Column::new()
-                .extend(page.client.joined_space_rooms().iter().map(|room| {
-                    room_image(page, room, Message::OpenSpace(room.room_id().to_owned()))
-                }))
+            page.client
+                .joined_space_rooms()
+                .iter()
+                .sorted_by_key(|v| v.room_id())
+                .map(|room| room_image(page, room, Message::OpenSpace(room.room_id().to_owned())))
+                .collect::<Column<_>>()
                 .spacing(SPACING_LARGE),
         )
         .direction(scrollable::Direction::Vertical(
@@ -37,34 +40,46 @@ pub fn space_list(page: &Page) -> Element<'_, Message> {
 
 pub fn channel_list(page: &Page) -> Element<'_, Message> {
     container(
-        column([
-            text("rooms").into(),
-            rule::horizontal(SPACING_SMALL).into(),
-            scrollable(
-                page.space_rooms
-                    .iter()
-                    .filter_map(|room| page.client.get_room(room))
-                    .map(|room| {
-                        button(text(room_name(&room)).wrapping(text::Wrapping::WordOrGlyph))
-                            .style(button::subtle)
-                            .width(Fill)
-                            .on_press(Message::OpenRoom(room.room_id().to_owned()))
-                            .into()
+        Column::new()
+            .push_maybe(
+                page.current_space
+                    .as_ref()
+                    .and_then(|space_id| page.client.get_room(space_id.as_ref()))
+                    .and_then(|room| {
+                        room.cached_display_name()
+                            .map(|v| v.to_string())
+                            .or_else(|| room.name())
+                            .or_else(|| Some(room.room_id().to_string()))
                     })
-                    .collect::<Column<_>>()
-                    .spacing(SPACING_LARGE),
+                    .map(text),
             )
-            .spacing(SPACING_LARGE)
-            .into(),
-        ])
-        .push_maybe(page.needs_verification.then(|| {
-            column([
-                text("This device is not verified").into(),
-                button("Verify").into(),
+            .extend([
+                rule::horizontal(SPACING_SMALL).into(),
+                scrollable(
+                    page.space_rooms
+                        .iter()
+                        .filter_map(|room| page.client.get_room(room))
+                        .sorted_by_key(|room| room.room_id().to_owned())
+                        .map(|room| {
+                            button(text(room_name(&room)).wrapping(text::Wrapping::WordOrGlyph))
+                                .style(button::subtle)
+                                .width(Fill)
+                                .on_press(Message::OpenRoom(room.room_id().to_owned()))
+                                .into()
+                        })
+                        .collect::<Column<_>>()
+                        .spacing(SPACING_LARGE),
+                )
+                .spacing(SPACING_LARGE)
+                .into(),
             ])
-            .into()
-        }))
-        .spacing(SPACING_LARGE),
+            .push_maybe(page.needs_verification.then(|| {
+                column([
+                    text("This device is not verified").into(),
+                    button("Verify").into(),
+                ])
+            }))
+            .spacing(SPACING_LARGE),
     )
     .padding(SPACING_LARGE)
     .align_left(CHANNEL_LIST_WIDTH)
@@ -124,7 +139,7 @@ pub fn message(msg: &MessageContent) -> Element<'_, Message> {
         text(
             msg.sender
                 .as_ref()
-                .map_or_else(|| "system".to_owned(), ToString::to_string),
+                .map_or_else(|| "# system".to_owned(), ToString::to_string),
         )
         .font(FONT_BOLD)
         .into(),

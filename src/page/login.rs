@@ -213,7 +213,6 @@ impl ViewLike<PageMessage> for Page {
                             .padding(SPACING_LARGE)
                             .style(container::danger)
                             .width(Fill)
-                            .into()
                     }))
                     .push(
                         container(
