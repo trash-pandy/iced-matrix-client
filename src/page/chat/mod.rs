@@ -7,7 +7,7 @@ use iced::{Element, Subscription, Task};
 use matrix_sdk::ruma::OwnedRoomId;
 
 use crate::app::ViewLike;
-use crate::pages::PageMessage;
+use crate::page::PageMessage;
 use crate::tasks::get_space_rooms;
 use crate::util::Smuggle;
 use crate::worker::{self, WorkerSubscription, messages, sliding_sync, verification};

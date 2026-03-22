@@ -15,8 +15,7 @@ use zeroize::Zeroizing;
 use crate::app::{AppMessage, Init, ViewLike};
 use crate::components::labelled;
 use crate::extensions::ColumnExt;
-use crate::pages;
-use crate::pages::PageMessage;
+use crate::page::{self, PageMessage};
 
 crate::msg_adapter_impl!(Message, PageMessage, Login);
 
@@ -171,7 +170,7 @@ impl ViewLike<PageMessage> for Page {
             Message::DoneLogin(client) => {
                 self.app_sink
                     .send(AppMessage::SwitchPage(Box::new(move |_init| {
-                        (pages::chat::Page::from_client(&client).into(), Task::none())
+                        (page::chat::Page::from_client(&client).into(), Task::none())
                     })))
                     .ok();
                 Task::none()

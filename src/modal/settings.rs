@@ -2,7 +2,7 @@ use iced::widget::space;
 use iced::{Element, Subscription, Task};
 
 use crate::app::ViewLike;
-use crate::modals::ModalMessage;
+use crate::modal::ModalMessage;
 
 crate::msg_adapter_impl!(Message, ModalMessage, Settings);
 

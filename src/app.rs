@@ -8,10 +8,10 @@ use iced::widget::operation;
 use iced::{Element, Subscription, Task, stream};
 use tokio::sync::broadcast;
 
-use crate::modals::{Modal, ModalAdapt};
-use crate::pages::{Page, PageAdapt, PageMessage};
+use crate::modal::{Modal, ModalAdapt};
+use crate::page::{Page, PageAdapt, PageMessage};
 use crate::util::Smuggle;
-use crate::{modals, pages};
+use crate::{modal, page};
 
 pub struct State {
     page: Page,
@@ -23,7 +23,7 @@ pub struct State {
 impl State {
     fn boot() -> (Self, Task<AppMessage>) {
         let (app_sink, app_stream) = broadcast::channel(64);
-        let (page, task) = pages::login::Page::new(Init {
+        let (page, task) = page::login::Page::new(Init {
             app_sink: app_sink.clone(),
         });
         (
@@ -122,20 +122,20 @@ pub trait ViewLike<M> {
 
 #[derive(Debug, Clone)]
 pub enum AppMessage {
-    PageMessage(pages::PageMessage),
-    ModalMessage(modals::ModalMessage),
+    PageMessage(page::PageMessage),
+    ModalMessage(modal::ModalMessage),
     Event(Event),
-    SwitchPage(Box<dyn pages::BootPageFn>),
+    SwitchPage(Box<dyn page::BootPageFn>),
 }
 
-impl From<pages::PageMessage> for AppMessage {
-    fn from(value: pages::PageMessage) -> Self {
+impl From<page::PageMessage> for AppMessage {
+    fn from(value: page::PageMessage) -> Self {
         Self::PageMessage(value)
     }
 }
 
-impl From<modals::ModalMessage> for AppMessage {
-    fn from(value: modals::ModalMessage) -> Self {
+impl From<modal::ModalMessage> for AppMessage {
+    fn from(value: modal::ModalMessage) -> Self {
         Self::ModalMessage(value)
     }
 }
