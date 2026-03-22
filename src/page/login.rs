@@ -59,45 +59,46 @@ impl Page {
             app_sink: init.app_sink,
             logging_in: true,
         };
-        let task = Task::future(async {
-            let Ok(login_info) = std::fs::read_to_string("./app-data/login") else {
-                return Message::RestoreSessionFailed;
-            };
-            let Ok(login_info) = serde_json::from_str::<LoginInfo>(&login_info) else {
-                return Message::RestoreSessionFailed;
-            };
-            let Ok(client) = matrix_sdk::Client::builder()
-                .server_name_or_homeserver_url(login_info.homeserver)
-                .sqlite_store("./app-data/db", None)
-                .build()
-                .await
-            else {
-                return Message::RestoreSessionFailed;
-            };
-            let login = client
-                .matrix_auth()
-                .restore_session(
-                    MatrixSession {
-                        meta: SessionMeta {
-                            user_id: OwnedUserId::from_str(&login_info.user_id).unwrap(),
-                            device_id: OwnedDeviceId::from(login_info.device_id),
-                        },
-                        tokens: SessionTokens {
-                            access_token: login_info.access_token,
-                            refresh_token: login_info.refresh_token,
-                        },
-                    },
-                    matrix_sdk::store::RoomLoadSettings::All,
-                )
-                .await;
-            client.sync_once(SyncSettings::default()).await.ok();
-            match login {
-                Ok(()) => Message::DoneLogin(client),
-                Err(e) => Message::Error(e.to_string()),
-            }
-        });
 
-        (page, task)
+        (page, Task::future(restore_session()))
+    }
+}
+
+async fn restore_session() -> Message {
+    let Ok(login_info) = std::fs::read_to_string("./app-data/login") else {
+        return Message::RestoreSessionFailed;
+    };
+    let Ok(login_info) = serde_json::from_str::<LoginInfo>(&login_info) else {
+        return Message::RestoreSessionFailed;
+    };
+    let Ok(client) = matrix_sdk::Client::builder()
+        .server_name_or_homeserver_url(login_info.homeserver)
+        .sqlite_store("./app-data/db", None)
+        .build()
+        .await
+    else {
+        return Message::RestoreSessionFailed;
+    };
+    let login = client
+        .matrix_auth()
+        .restore_session(
+            MatrixSession {
+                meta: SessionMeta {
+                    user_id: OwnedUserId::from_str(&login_info.user_id).unwrap(),
+                    device_id: OwnedDeviceId::from(login_info.device_id),
+                },
+                tokens: SessionTokens {
+                    access_token: login_info.access_token,
+                    refresh_token: login_info.refresh_token,
+                },
+            },
+            matrix_sdk::store::RoomLoadSettings::All,
+        )
+        .await;
+    client.sync_once(SyncSettings::default()).await.ok();
+    match login {
+        Ok(()) => Message::DoneLogin(client),
+        Err(e) => Message::Error(e.to_string()),
     }
 }
 
