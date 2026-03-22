@@ -9,7 +9,7 @@ use matrix_sdk::room::{Messages, MessagesOptions};
 use matrix_sdk::ruma::events::AnySyncTimelineEvent;
 use matrix_sdk::ruma::serde::Raw;
 use matrix_sdk::ruma::{OwnedEventId, OwnedRoomId, OwnedUserId, assign};
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
 use crate::worker::WorkerSubscription;
 
@@ -18,7 +18,6 @@ pub type Worker = super::Worker<Request>;
 impl WorkerSubscription<Response> for Worker {
     fn subscription(mut self) -> impl Stream<Item = Response> {
         stream::channel(64, async move |mut s: mpsc::Sender<Response>| {
-            info!("created messages worker");
             let observer = self
                 .client
                 .observe_events::<Raw<AnySyncTimelineEvent>, Room>();
@@ -37,7 +36,6 @@ impl WorkerSubscription<Response> for Worker {
                             return;
                         };
 
-                        info!(?msg);
                         let Some(content) = handle_message(&mut last_event_id, &msg) else {
                             continue;
                         };
