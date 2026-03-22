@@ -3,7 +3,7 @@ use std::str::FromStr;
 use iced::Length::{Fill, Shrink};
 use iced::alignment::Horizontal::Left;
 use iced::widget::{Column, button, container, text, text_input};
-use iced::{Element, Font, Subscription, Task};
+use iced::{Element, Subscription, Task};
 use matrix_sdk::authentication::matrix::MatrixSession;
 use matrix_sdk::config::SyncSettings;
 use matrix_sdk::ruma::{OwnedDeviceId, OwnedUserId};
@@ -13,9 +13,11 @@ use tokio::sync::broadcast;
 use zeroize::Zeroizing;
 
 use crate::app::{AppMessage, Init, ViewLike};
-use crate::components::labelled;
 use crate::extensions::ColumnExt;
 use crate::page::{self, PageMessage};
+use crate::styling::{
+    FONT_MEDIUM, SPACING_LARGE, SPACING_MEDIUM, TEXT_LARGE, TEXT_SMALL, labelled,
+};
 
 crate::msg_adapter_impl!(Message, PageMessage, Login);
 
@@ -38,15 +40,6 @@ pub struct Page {
     error: Option<String>,
     app_sink: broadcast::Sender<AppMessage>,
     logging_in: bool,
-}
-
-#[derive(Serialize, Deserialize)]
-struct LoginInfo {
-    homeserver: String,
-    user_id: String,
-    device_id: String,
-    access_token: String,
-    refresh_token: Option<String>,
 }
 
 impl Page {
@@ -191,37 +184,33 @@ impl ViewLike<PageMessage> for Page {
                 Column::new()
                     .push(
                         text("iced-matrix-client")
-                            .font(Font {
-                                family: iced::font::Family::Name("Ubuntu Sans"),
-                                weight: iced::font::Weight::Medium,
-                                ..Default::default()
-                            })
+                            .font(FONT_MEDIUM)
                             .center()
                             .width(Fill)
-                            .size(21),
+                            .size(TEXT_LARGE),
                     )
                     .push(labelled(
                         "Homeserver",
                         text_input("bash.org", &self.homeserver)
-                            .size(14)
+                            .size(TEXT_SMALL)
                             .on_input(Message::UpdateHomeserver),
                     ))
                     .push(labelled(
                         "Username",
                         text_input("azurediamond", &self.username)
-                            .size(14)
+                            .size(TEXT_SMALL)
                             .on_input(Message::UpdateUsername),
                     ))
                     .push(labelled(
                         "Password",
                         text_input("hunter2", &self.password)
                             .secure(true)
-                            .size(14)
+                            .size(TEXT_SMALL)
                             .on_input(|p| Message::UpdatePassword(p.into())),
                     ))
                     .push_maybe(self.error.as_ref().map(|e| {
                         container(text(e.as_str()).align_x(Left))
-                            .padding(8.0)
+                            .padding(SPACING_LARGE)
                             .style(container::danger)
                             .width(Fill)
                             .into()
@@ -233,16 +222,25 @@ impl ViewLike<PageMessage> for Page {
                         )
                         .align_right(Fill),
                     )
-                    .spacing(12),
+                    .spacing(SPACING_LARGE),
             )
             .style(container::bordered_box)
             .height(Shrink)
             .center_x(240)
-            .padding(6),
+            .padding(SPACING_MEDIUM),
         )
         .center(Shrink)
         .width(Fill)
         .height(Fill)
         .into()
     }
+}
+
+#[derive(Serialize, Deserialize)]
+struct LoginInfo {
+    homeserver: String,
+    user_id: String,
+    device_id: String,
+    access_token: String,
+    refresh_token: Option<String>,
 }

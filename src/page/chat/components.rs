@@ -4,14 +4,17 @@ use iced::Length::Fill;
 use iced::widget::{
     Column, button, column, container, image, rule, scrollable, space, text, text_input, tooltip,
 };
-use iced::{Element, Theme};
+use iced::{Element, Pixels, Theme};
 use matrix_sdk::Room;
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::{Message, Page};
-use crate::components::FONT_BOLD;
+use crate::styling::{FONT_BOLD, SPACING_LARGE, SPACING_MEDIUM, SPACING_SMALL};
 use crate::extensions::ColumnExt;
 use crate::worker::messages::MessageContent;
+
+const ROOM_IMAGE_SIZE: f32 = 36.0;
+const CHANNEL_LIST_WIDTH: Pixels = Pixels(240.0);
 
 pub fn space_list(page: &Page) -> Element<'_, Message> {
     container(
@@ -20,14 +23,14 @@ pub fn space_list(page: &Page) -> Element<'_, Message> {
                 .extend(page.client.joined_space_rooms().iter().map(|room| {
                     room_image(page, room, Message::OpenSpace(room.room_id().to_owned()))
                 }))
-                .spacing(8),
+                .spacing(SPACING_LARGE),
         )
         .direction(scrollable::Direction::Vertical(
             scrollable::Scrollbar::hidden(),
         )),
     )
-    .padding(8)
-    .align_left(52)
+    .padding(SPACING_LARGE)
+    .align_left(ROOM_IMAGE_SIZE + SPACING_LARGE.0 * 2.0)
     .height(Fill)
     .into()
 }
@@ -36,7 +39,7 @@ pub fn channel_list(page: &Page) -> Element<'_, Message> {
     container(
         column([
             text("rooms").into(),
-            rule::horizontal(2).into(),
+            rule::horizontal(SPACING_SMALL).into(),
             scrollable(
                 page.space_rooms
                     .iter()
@@ -49,9 +52,9 @@ pub fn channel_list(page: &Page) -> Element<'_, Message> {
                             .into()
                     })
                     .collect::<Column<_>>()
-                    .spacing(8),
+                    .spacing(SPACING_LARGE),
             )
-            .spacing(8)
+            .spacing(SPACING_LARGE)
             .into(),
         ])
         .push_maybe(page.needs_verification.then(|| {
@@ -61,10 +64,10 @@ pub fn channel_list(page: &Page) -> Element<'_, Message> {
             ])
             .into()
         }))
-        .spacing(8),
+        .spacing(SPACING_LARGE),
     )
-    .padding(8)
-    .align_left(240)
+    .padding(SPACING_LARGE)
+    .align_left(CHANNEL_LIST_WIDTH)
     .height(Fill)
     .style(|theme: &Theme| {
         let p = theme.extended_palette();
@@ -84,18 +87,18 @@ pub fn room_pane(page: &Page) -> Element<'_, Message> {
                 .wrapping(text::Wrapping::None)
                 .center(),
         )
-        .push(rule::horizontal(2))
+        .push(rule::horizontal(SPACING_SMALL))
         .push(
             scrollable(messages_pane(page))
                 .height(Fill)
                 .width(Fill)
-                .spacing(2.),
+                .spacing(SPACING_SMALL),
         )
         .push(container(
             text_input("Send a message...", &page.text).on_input(Message::UpdateMessage),
         ))
-        .spacing(8)
-        .padding(8)
+        .spacing(SPACING_LARGE)
+        .padding(SPACING_LARGE)
         .into()
 }
 
@@ -108,7 +111,7 @@ pub fn messages_pane(page: &Page) -> Element<'_, Message> {
                 |messages| {
                     column(messages.iter().map(message))
                         .height(Fill)
-                        .spacing(8)
+                        .spacing(SPACING_LARGE)
                         .into()
                 },
             )
@@ -134,12 +137,17 @@ fn room_image<'a, M: 'a + Clone>(state: &Page, room: &Room, on_press: M) -> Elem
     let content: Element<'a, M> = state.avatars.get(&room.room_id().to_owned()).map_or_else(
         || {
             text(room_short_name(room))
-                .width(36)
-                .height(36)
+                .width(ROOM_IMAGE_SIZE)
+                .height(ROOM_IMAGE_SIZE)
                 .center()
                 .into()
         },
-        |handle| image(handle).width(36).height(36).into(),
+        |handle| {
+            image(handle)
+                .width(ROOM_IMAGE_SIZE)
+                .height(ROOM_IMAGE_SIZE)
+                .into()
+        },
     );
     tooltip(
         button(content)
@@ -148,7 +156,7 @@ fn room_image<'a, M: 'a + Clone>(state: &Page, room: &Room, on_press: M) -> Elem
             .style(room_image_button_style)
             .on_press(on_press),
         container(text(room_name(room)))
-            .padding(4.0)
+            .padding(SPACING_MEDIUM)
             .style(container::secondary),
         tooltip::Position::Right,
     )
@@ -158,7 +166,7 @@ fn room_image<'a, M: 'a + Clone>(state: &Page, room: &Room, on_press: M) -> Elem
 fn room_image_button_style(theme: &Theme, status: button::Status) -> button::Style {
     let mut style = button::secondary(theme, status);
     let palette = theme.extended_palette();
-    style.border = style.border.rounded(36);
+    style.border = style.border.rounded(ROOM_IMAGE_SIZE);
     style.with_background(
         match status {
             button::Status::Active => palette.background.weakest,

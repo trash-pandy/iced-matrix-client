@@ -1,9 +1,9 @@
 mod app;
-mod components;
 mod extensions;
 mod macros;
 mod modal;
 mod page;
+mod styling;
 mod tasks;
 mod util;
 mod worker;
