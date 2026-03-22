@@ -1,3 +1,5 @@
+use std::string::ToString;
+
 use iced::Length::Fill;
 use iced::widget::{
     Column, button, column, container, image, rule, scrollable, space, text, text_input, tooltip,
@@ -7,7 +9,9 @@ use matrix_sdk::Room;
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::{Message, Page};
+use crate::components::FONT_BOLD;
 use crate::extensions::ColumnExt;
+use crate::worker::messages::MessageContent;
 
 pub fn space_list(page: &Page) -> Element<'_, Message> {
     container(
@@ -102,19 +106,28 @@ pub fn messages_pane(page: &Page) -> Element<'_, Message> {
             page.messages.get(room_id).map_or_else(
                 || space().height(Fill).into(),
                 |messages| {
-                    column(messages.iter().map(|v| {
-                        text(v.sender.as_ref().map_or_else(
-                            || v.message_content.clone(),
-                            |sender| format!("{}: {}", sender, v.message_content),
-                        ))
+                    column(messages.iter().map(message))
+                        .height(Fill)
+                        .spacing(8)
                         .into()
-                    }))
-                    .height(Fill)
-                    .into()
                 },
             )
         },
     )
+}
+
+pub fn message(msg: &MessageContent) -> Element<'_, Message> {
+    column([
+        text(
+            msg.sender
+                .as_ref()
+                .map_or_else(|| "system".to_owned(), ToString::to_string),
+        )
+        .font(FONT_BOLD)
+        .into(),
+        text(msg.message_content.clone()).into(),
+    ])
+    .into()
 }
 
 fn room_image<'a, M: 'a + Clone>(state: &Page, room: &Room, on_press: M) -> Element<'a, M> {
