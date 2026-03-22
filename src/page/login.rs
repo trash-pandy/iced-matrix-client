@@ -60,7 +60,7 @@ impl Page {
             logging_in: true,
         };
         let task = Task::future(async {
-            let Ok(login_info) = std::fs::read_to_string("./login") else {
+            let Ok(login_info) = std::fs::read_to_string("./app-data/login") else {
                 return Message::RestoreSessionFailed;
             };
             let Ok(login_info) = serde_json::from_str::<LoginInfo>(&login_info) else {
@@ -149,6 +149,7 @@ impl ViewLike<PageMessage> for Page {
                     client.sync_once(SyncSettings::default()).await.ok();
                     match login {
                         Ok(login) => {
+                            std::fs::create_dir("app-data").unwrap();
                             std::fs::write(
                                 "./app-data/login",
                                 serde_json::to_string(&LoginInfo {
