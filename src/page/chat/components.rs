@@ -104,7 +104,7 @@ pub fn messages_pane(page: &Page) -> Element<'_, Message> {
                 |messages| {
                     column(messages.iter().map(|v| {
                         text(v.sender.as_ref().map_or_else(
-                            || format!("//// {}", v.message_content),
+                            || v.message_content.clone(),
                             |sender| format!("{}: {}", sender, v.message_content),
                         ))
                         .into()
