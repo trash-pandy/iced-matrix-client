@@ -1,0 +1,32 @@
+[package]
+name = "iced-matrix-client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+enum_dispatch = "0.3.13"
+futures-util = "0.3.32"
+iced = { version = "0.14.0", features = ["tokio", "image"] }
+iced_winit = "0.14.0"
+matrix-sdk = "0.16.0"
+ruma-client-api = { version = "0.22.1", features = ["client"] }
+serde = { version = "1.0.228", features = ["serde_derive"] }
+serde_json = "1.0.149"
+tokio = "1.50.0"
+tracing = { version = "0.1.44", features = [
+    "max_level_debug",
+    "release_max_level_info",
+] }
+tracing-subscriber = { version = "0.3.23", features = [
+    "local-time",
+    "env-filter",
+] }
+unicode-segmentation = "1.12.0"
+zeroize = "1.8.2"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+
+enum_variant_names = "allow"
+too_many_lines = "allow"

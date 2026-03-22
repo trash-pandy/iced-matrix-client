@@ -1,0 +1,3 @@
+[toolchain]
+# matrix-sdk fails to compile past 1.93
+channel = "nightly-2025-12-05"
