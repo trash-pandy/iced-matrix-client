@@ -2377,6 +2377,7 @@ dependencies = [
  "iced_winit",
  "itertools 0.14.0",
  "matrix-sdk",
+ "mime",
  "ruma-client-api",
  "serde",
  "serde_json",

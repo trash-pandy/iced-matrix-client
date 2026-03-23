@@ -141,21 +141,24 @@ pub fn message(msg: &RenderedMessage) -> Element<'_, Message> {
 }
 
 fn room_image<'a, M: 'a + Clone>(state: &Page, room: &Room, on_press: M) -> Element<'a, M> {
-    let content: Element<'a, M> = state.avatars.get(&room.room_id().to_owned()).map_or_else(
-        || {
-            text(room_short_name(room))
-                .width(ROOM_IMAGE_SIZE)
-                .height(ROOM_IMAGE_SIZE)
-                .center()
-                .into()
-        },
-        |handle| {
-            image(handle)
-                .width(ROOM_IMAGE_SIZE)
-                .height(ROOM_IMAGE_SIZE)
-                .into()
-        },
-    );
+    let content: Element<'a, M> = state
+        .room_avatars
+        .get(&room.room_id().to_owned())
+        .map_or_else(
+            || {
+                text(room_short_name(room))
+                    .width(ROOM_IMAGE_SIZE)
+                    .height(ROOM_IMAGE_SIZE)
+                    .center()
+                    .into()
+            },
+            |handle| {
+                image(handle)
+                    .width(ROOM_IMAGE_SIZE)
+                    .height(ROOM_IMAGE_SIZE)
+                    .into()
+            },
+        );
     tooltip(
         button(content)
             .padding(0)

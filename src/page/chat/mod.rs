@@ -1,11 +1,16 @@
 mod components;
 mod message;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
+use futures_util::{SinkExt, StreamExt};
+use iced::futures::channel::mpsc;
+use iced::widget::image::Handle;
 use iced::widget::{Row, image};
-use iced::{Element, Subscription, Task};
-use matrix_sdk::ruma::OwnedRoomId;
+use iced::{Element, Subscription, Task, stream};
+use matrix_sdk::Room;
+use matrix_sdk::media::{MediaFormat, MediaThumbnailSettings};
+use matrix_sdk::ruma::{OwnedRoomId, UInt};
 
 use crate::app::ViewLike;
 use crate::page::PageMessage;
@@ -40,7 +45,7 @@ pub enum Message {
 pub struct Page {
     client: matrix_sdk::Client,
 
-    avatars: HashMap<OwnedRoomId, image::Handle>,
+    room_avatars: HashMap<OwnedRoomId, image::Handle>,
     current_space: Option<OwnedRoomId>,
     current_room: Option<OwnedRoomId>,
 
@@ -62,7 +67,7 @@ impl Page {
         Self {
             client: client.clone(),
 
-            avatars: HashMap::new(),
+            room_avatars: HashMap::new(),
             current_space: None,
             current_room: None,
 
@@ -101,6 +106,51 @@ impl ViewLike<PageMessage> for Page {
                 |d| d.take().subscription(),
             )
             .map(Message::MessagesUpdate),
+            Subscription::run_with(Smuggle::new("thumbnail-worker", self.client.clone()), |d| {
+                let client = d.take();
+                stream::channel(64, |mut s| async move {
+                    let mut retrieved = HashSet::<OwnedRoomId>::new();
+                    let (mut rooms, mut stream) = client.rooms_stream();
+
+                    let mut retrieve_avatars =
+                        async |s: &mut mpsc::Sender<Message>, rooms: Vec<Room>| {
+                            for room in &rooms {
+                                if !retrieved.insert(room.room_id().to_owned()) {
+                                    continue;
+                                }
+
+                                let Ok(Some(avatar)) = room
+                                    .avatar(MediaFormat::Thumbnail(MediaThumbnailSettings {
+                                        method: matrix_sdk::ruma::media::Method::Scale,
+                                        width: UInt::new_wrapping(36),
+                                        height: UInt::new_wrapping(36),
+                                        animated: false,
+                                    }))
+                                    .await
+                                else {
+                                    continue;
+                                };
+
+                                s.send(Message::RoomAvatar(
+                                    room.room_id().to_owned(),
+                                    Handle::from_bytes(avatar),
+                                ))
+                                .await
+                                .ok();
+                            }
+                        };
+
+                    retrieve_avatars(&mut s, rooms.iter().cloned().collect()).await;
+
+                    while let Some(updates) = stream.next().await {
+                        for update in updates {
+                            update.apply(&mut rooms);
+                        }
+
+                        retrieve_avatars(&mut s, rooms.iter().cloned().collect()).await;
+                    }
+                })
+            }),
         ])
     }
 
@@ -140,7 +190,7 @@ impl ViewLike<PageMessage> for Page {
                 Task::none()
             }
             Message::RoomAvatar(room_id, avatar) => {
-                self.avatars.insert(room_id, avatar);
+                self.room_avatars.insert(room_id, avatar);
                 Task::none()
             }
             Message::MessagesUpdate(response) => {
