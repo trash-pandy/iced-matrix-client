@@ -4,6 +4,7 @@ use enum_dispatch::enum_dispatch;
 use iced::{Element, Subscription, Task};
 
 use crate::app::{Init, IntoOrPanic, ViewLike};
+use crate::name_of_trait;
 
 pub mod chat;
 pub mod login;
@@ -63,6 +64,6 @@ impl Clone for Box<dyn BootPageFn> {
 
 impl Debug for Box<dyn BootPageFn> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("NewPageFn").finish()
+        f.write_str(name_of_trait!(BootPageFn))
     }
 }
