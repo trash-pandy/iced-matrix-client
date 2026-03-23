@@ -102,10 +102,10 @@ fn handle_messages(rendered: &mut Vec<MessageContent>, messages: &Messages) {
                 }
             }
             TimelineEventKind::UnableToDecrypt { utd_info, .. } => {
-                rendered.push(MessageContent {
-                    sender: None,
-                    content: format!("{:?}", utd_info.reason),
-                });
+                rendered.push(state_message(format!(
+                    "unable to decrypt:\n{:?}",
+                    utd_info.reason
+                )));
             }
             TimelineEventKind::PlainText { event } => {
                 if let Some(msg) = handle_message(&mut None, event) {
@@ -138,191 +138,126 @@ fn handle_message(
 
 fn render_message_event(ev: AnySyncMessageLikeEvent) -> Option<MessageContent> {
     match ev {
-        AnySyncMessageLikeEvent::RoomEncrypted(ev) => Some(MessageContent {
-            sender: Some(ev.sender().to_owned()),
-            content: "encrypted message".to_owned(),
-        }),
+        AnySyncMessageLikeEvent::RoomEncrypted(ev) => Some(state_message(format!(
+            "unable to decrypt message from {}",
+            ev.sender()
+        ))),
         AnySyncMessageLikeEvent::RoomMessage(ev) => ev.as_original().map(|og| MessageContent {
+            display_name: Some(ev.sender().to_string()),
             sender: Some(ev.sender().to_owned()),
             content: og.content.body().to_owned(),
         }),
-        AnySyncMessageLikeEvent::RoomRedaction(ev) => ev.as_original().map(|ev| MessageContent {
-            sender: None,
-            content: ev.content.redacts.as_ref().map_or_else(
+        AnySyncMessageLikeEvent::RoomRedaction(ev) => ev.as_original().map(|ev| {
+            state_message(ev.content.redacts.as_ref().map_or_else(
                 || "unknown event redacted".to_owned(),
                 |ev_id| format!("redacting event {ev_id}"),
-            ),
+            ))
         }),
-        ev => Some(MessageContent {
-            sender: None,
-            content: format!(
-                "//// unhandled event type {} from {}",
-                ev.event_type(),
-                ev.sender()
-            ),
-        }),
+        ev => Some(state_message(format!(
+            "//// unhandled event type {} from {}",
+            ev.event_type(),
+            ev.sender()
+        ))),
     }
 }
 
 fn render_state_event(ev: AnySyncStateEvent) -> Option<MessageContent> {
     match ev {
-        AnySyncStateEvent::RoomAliases(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room aliases have changed".to_owned(),
-        }),
-        AnySyncStateEvent::RoomAvatar(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room avatar has changed".to_owned(),
-        }),
-        AnySyncStateEvent::RoomCanonicalAlias(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room canonical alias has changed".to_owned(),
-        }),
-        AnySyncStateEvent::RoomCreate(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room has been created".to_owned(),
-        }),
-        AnySyncStateEvent::RoomEncryption(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room encryption has changed".to_owned(),
-        }),
-        AnySyncStateEvent::RoomGuestAccess(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room guest access has changed".to_owned(),
-        }),
-        AnySyncStateEvent::RoomHistoryVisibility(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room history visibility has changed".to_owned(),
-        }),
-        AnySyncStateEvent::RoomJoinRules(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room join rules have changed".to_owned(),
-        }),
+        AnySyncStateEvent::RoomAliases(_ev) => Some("room aliases have changed".to_owned()),
+        AnySyncStateEvent::RoomAvatar(_ev) => Some("room avatar has changed".to_owned()),
+        AnySyncStateEvent::RoomCanonicalAlias(_ev) => {
+            Some("room canonical alias has changed".to_owned())
+        }
+        AnySyncStateEvent::RoomCreate(_ev) => Some("room has been created".to_owned()),
+        AnySyncStateEvent::RoomEncryption(_ev) => Some("room encryption has changed".to_owned()),
+        AnySyncStateEvent::RoomGuestAccess(_ev) => Some("room guest access has changed".to_owned()),
+        AnySyncStateEvent::RoomHistoryVisibility(_ev) => {
+            Some("room history visibility has changed".to_owned())
+        }
+        AnySyncStateEvent::RoomJoinRules(_ev) => Some("room join rules have changed".to_owned()),
         AnySyncStateEvent::RoomMember(ev) => {
             ev.as_original().map(|ev| match ev.membership_change() {
-                MembershipChange::None => MessageContent {
-                    sender: None,
-                    content: format!("{} is unchanged", ev.sender),
-                },
-                MembershipChange::Error => MessageContent {
-                    sender: None,
-                    content: format!("{} had a malformed membership change", ev.sender),
-                },
-                MembershipChange::Joined => MessageContent {
-                    sender: None,
-                    content: format!("{} joined", ev.sender),
-                },
-                MembershipChange::Left => MessageContent {
-                    sender: None,
-                    content: format!("{} left", ev.sender),
-                },
-                MembershipChange::Banned => MessageContent {
-                    sender: None,
-                    content: format!("{} was banned", ev.sender),
-                },
-                MembershipChange::Unbanned => MessageContent {
-                    sender: None,
-                    content: format!("{} was unbanned", ev.sender),
-                },
-                MembershipChange::Kicked => MessageContent {
-                    sender: None,
-                    content: format!("{} was kicked", ev.sender),
-                },
-                MembershipChange::Invited => MessageContent {
-                    sender: None,
-                    content: format!("{} was invited", ev.sender),
-                },
-                MembershipChange::KickedAndBanned => MessageContent {
-                    sender: None,
-                    content: format!("{} was kicked and banned", ev.sender),
-                },
-                MembershipChange::InvitationAccepted => MessageContent {
-                    sender: None,
-                    content: format!("{} accepted invitation", ev.sender),
-                },
-                MembershipChange::InvitationRejected => MessageContent {
-                    sender: None,
-                    content: format!("{} rejected invitation", ev.sender),
-                },
-                MembershipChange::InvitationRevoked => MessageContent {
-                    sender: None,
-                    content: format!("{} had their invitation revoked", ev.sender),
-                },
-                MembershipChange::Knocked => MessageContent {
-                    sender: None,
-                    content: format!("{} knocked", ev.sender),
-                },
-                MembershipChange::KnockAccepted => MessageContent {
-                    sender: None,
-                    content: format!("{} knock was accepted", ev.sender),
-                },
-                MembershipChange::KnockRetracted => MessageContent {
-                    sender: None,
-                    content: format!("{} knock was retracted", ev.sender),
-                },
-                MembershipChange::KnockDenied => MessageContent {
-                    sender: None,
-                    content: format!("{} knock was denied", ev.sender),
-                },
+                MembershipChange::None => format!("{} is unchanged", ev.sender),
+                MembershipChange::Error => {
+                    format!("{} had a malformed membership change", ev.sender)
+                }
+                MembershipChange::Joined => format!("{} joined", ev.sender),
+                MembershipChange::Left => format!("{} left", ev.sender),
+                MembershipChange::Banned => format!("{} was banned", ev.sender),
+                MembershipChange::Unbanned => format!("{} was unbanned", ev.sender),
+                MembershipChange::Kicked => format!("{} was kicked", ev.sender),
+                MembershipChange::Invited => format!("{} was invited", ev.sender),
+                MembershipChange::KickedAndBanned => {
+                    format!("{} was kicked and banned", ev.sender)
+                }
+                MembershipChange::InvitationAccepted => {
+                    format!("{} accepted invitation", ev.sender)
+                }
+                MembershipChange::InvitationRejected => {
+                    format!("{} rejected invitation", ev.sender)
+                }
+                MembershipChange::InvitationRevoked => {
+                    format!("{} had their invitation revoked", ev.sender)
+                }
+                MembershipChange::Knocked => format!("{} knocked", ev.sender),
+                MembershipChange::KnockAccepted => format!("{} knock was accepted", ev.sender),
+                MembershipChange::KnockRetracted => format!("{} knock was retracted", ev.sender),
+                MembershipChange::KnockDenied => format!("{} knock was denied", ev.sender),
                 MembershipChange::ProfileChanged {
                     displayname_change,
                     avatar_url_change,
-                } => MessageContent {
-                    sender: None,
-                    content: match (displayname_change, avatar_url_change) {
-                        (Some(_), Some(_)) => {
-                            format!("{} display name and avatar changed", ev.sender)
-                        }
-                        (Some(_), None) => format!("{} display name changed", ev.sender),
-                        (None, Some(_)) => format!("{} avatar changed", ev.sender),
-                        (None, None) => format!("{} had no change", ev.sender),
-                    },
+                } => match (displayname_change, avatar_url_change) {
+                    (Some(_), Some(_)) => {
+                        format!("{} display name and avatar changed", ev.sender)
+                    }
+                    (Some(_), None) => format!("{} display name changed", ev.sender),
+                    (None, Some(_)) => format!("{} avatar changed", ev.sender),
+                    (None, None) => format!("{} had no change", ev.sender),
                 },
                 ev => {
                     info!(?ev);
-                    MessageContent {
-                        sender: None,
-                        content: "//// unhandled membership change event".to_owned(),
-                    }
+                    "//// unhandled membership change event".to_owned()
                 }
             })
         }
-        AnySyncStateEvent::RoomName(ev) => ev.as_original().map(|ev| MessageContent {
-            sender: None,
-            content: format!("room name has been changed to \"{}\"", ev.content.name),
-        }),
-        AnySyncStateEvent::RoomPinnedEvents(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room pinned events have been changed".to_owned(),
-        }),
-        AnySyncStateEvent::RoomPowerLevels(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room power levels have been changed".to_owned(),
-        }),
-        AnySyncStateEvent::RoomServerAcl(_ev) => Some(MessageContent {
-            sender: None,
-            content: "room acl has been changed".to_owned(),
-        }),
-        AnySyncStateEvent::RoomTombstone(ev) => ev.as_original().map(|ev| MessageContent {
-            sender: None,
-            content: format!(
+        AnySyncStateEvent::RoomName(ev) => ev
+            .as_original()
+            .map(|ev| format!("room name has been changed to \"{}\"", ev.content.name)),
+        AnySyncStateEvent::RoomPinnedEvents(_ev) => {
+            Some("room pinned events have been changed".to_owned())
+        }
+        AnySyncStateEvent::RoomPowerLevels(_ev) => {
+            Some("room power levels have been changed".to_owned())
+        }
+        AnySyncStateEvent::RoomServerAcl(_ev) => Some("room acl has been changed".to_owned()),
+        AnySyncStateEvent::RoomTombstone(ev) => ev.as_original().map(|ev| {
+            format!(
                 "room has been tombstoned and is moving to {}",
                 ev.content.replacement_room,
-            ),
+            )
         }),
-        AnySyncStateEvent::RoomTopic(ev) => ev.as_original().map(|ev| MessageContent {
-            sender: None,
-            content: format!("room topic was changed to \"{}\"", ev.content.topic),
-        }),
-        ev => Some(MessageContent {
-            sender: None,
-            content: format!("//// unhandled state event type {}", ev.event_type()),
-        }),
+        AnySyncStateEvent::RoomTopic(ev) => ev
+            .as_original()
+            .map(|ev| format!("room topic was changed to \"{}\"", ev.content.topic)),
+        ev => Some(format!(
+            "//// unhandled state event type {}",
+            ev.event_type()
+        )),
+    }
+    .map(state_message)
+}
+
+fn state_message(content: impl Into<String>) -> MessageContent {
+    MessageContent {
+        display_name: None,
+        sender: None,
+        content: content.into(),
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct MessageContent {
+    pub display_name: Option<String>,
     pub sender: Option<OwnedUserId>,
     pub content: String,
 }
