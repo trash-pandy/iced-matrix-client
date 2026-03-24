@@ -233,13 +233,13 @@ impl Program for IcedMatrixClient {
         _window: window::Id,
     ) -> Element<'a, Self::Message, Self::Theme, Self::Renderer> {
         Stack::new()
+            .push(state.page.adapt_view().map(Into::into))
             .push_maybe(
                 state
                     .modal
                     .as_ref()
                     .map(|modal| Container::new(modal.adapt_view().map(Into::into)).center(Shrink)),
             )
-            .push_under(state.page.adapt_view().map(Into::into))
             .into()
     }
 }

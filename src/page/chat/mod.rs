@@ -8,7 +8,7 @@ use iced::{Element, Subscription, Task};
 use matrix_sdk::ruma::OwnedRoomId;
 
 use crate::app::{AppMessenger, ViewLike};
-use crate::modal::{self, ModalMessage};
+use crate::modal;
 use crate::page::PageMessage;
 use crate::page::chat::message::{RenderedMessage, render_message_content};
 use crate::tasks::get_space_rooms;
