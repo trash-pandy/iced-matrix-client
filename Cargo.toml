@@ -5,8 +5,14 @@ edition = "2024"
 
 [dependencies]
 enum_dispatch = "0.3.13"
+eyeball-im = "0.8.0"
 futures-util = "0.3.32"
-iced = { version = "0.14.0", features = ["tokio", "image", "markdown"] }
+iced = { version = "0.14.0", features = [
+    "tokio",
+    "image",
+    "markdown",
+    "advanced",
+] }
 iced_winit = "0.14.0"
 itertools = "0.14.0"
 matrix-sdk = "0.16.0"

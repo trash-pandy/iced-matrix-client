@@ -12,9 +12,12 @@ use matrix_sdk::Room;
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::{Message, Page};
-use crate::extensions::ColumnExt;
+use crate::extensions::PushMaybe;
 use crate::page::chat::message::RenderedMessage;
-use crate::styling::{APP_THEME, FONT_BOLD, SPACING_LARGE, SPACING_MEDIUM, SPACING_SMALL};
+use crate::styling::{
+    FONT_BOLD, SPACING_LARGE, SPACING_MEDIUM, SPACING_SMALL, TEXT_LARGE, TEXT_MED, TEXT_SMALL,
+    get_app_theme,
+};
 
 const ROOM_IMAGE_SIZE: f32 = 36.0;
 const CHANNEL_LIST_WIDTH: Pixels = Pixels(240.0);
@@ -135,7 +138,22 @@ pub fn messages_pane(page: &Page) -> Element<'_, Message> {
 pub fn message(msg: &RenderedMessage) -> Element<'_, Message> {
     column([
         text(msg.sender.clone()).font(FONT_BOLD).into(),
-        markdown::view(&msg.content, APP_THEME).map(Message::UrlClicked),
+        markdown::view(
+            &msg.content,
+            markdown::Settings {
+                text_size: TEXT_MED,
+                h1_size: TEXT_LARGE,
+                h2_size: TEXT_LARGE,
+                h3_size: TEXT_MED,
+                h4_size: TEXT_MED,
+                h5_size: TEXT_SMALL,
+                h6_size: TEXT_SMALL,
+                code_size: TEXT_MED,
+                spacing: SPACING_SMALL,
+                style: markdown::Style::from(get_app_theme()),
+            },
+        )
+        .map(Message::UrlClicked),
     ])
     .into()
 }
@@ -144,6 +162,8 @@ fn room_image<'a, M: 'a + Clone>(state: &Page, room: &Room, on_press: M) -> Elem
     let content: Element<'a, M> = state
         .room_avatars
         .get(&room.room_id().to_owned())
+        .cloned()
+        .flatten()
         .map_or_else(
             || {
                 text(room_short_name(room))

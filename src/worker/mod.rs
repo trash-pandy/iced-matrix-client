@@ -1,3 +1,4 @@
+pub mod avatars;
 pub mod messages;
 pub mod sliding_sync;
 pub mod verification;

@@ -1,23 +1,19 @@
 mod components;
 mod message;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use futures_util::{SinkExt, StreamExt};
-use iced::futures::channel::mpsc;
-use iced::widget::image::Handle;
 use iced::widget::{Row, image};
-use iced::{Element, Subscription, Task, stream};
-use matrix_sdk::Room;
-use matrix_sdk::media::{MediaFormat, MediaThumbnailSettings};
-use matrix_sdk::ruma::{OwnedRoomId, UInt};
+use iced::{Element, Subscription, Task};
+use matrix_sdk::ruma::OwnedRoomId;
 
-use crate::app::ViewLike;
+use crate::app::{AppMessenger, ViewLike};
+use crate::modal::{self, ModalMessage};
 use crate::page::PageMessage;
 use crate::page::chat::message::{RenderedMessage, render_message_content};
 use crate::tasks::get_space_rooms;
 use crate::util::Smuggle;
-use crate::worker::{self, WorkerSubscription, messages, sliding_sync, verification};
+use crate::worker::{self, WorkerSubscription, avatars, messages, sliding_sync, verification};
 
 crate::msg_adapter_impl!(Message, PageMessage, Chat);
 
@@ -26,13 +22,12 @@ pub enum Message {
     OpenSpace(OwnedRoomId),
     OpenRoom(OwnedRoomId),
     UpdateMessage(String),
+    OpenSettings,
 
     SyncUpdate(sliding_sync::Response),
     VerificationUpdate(verification::Response),
     MessagesUpdate(messages::Response),
-
-    RoomSynced(OwnedRoomId, bool),
-    RoomAvatar(OwnedRoomId, image::Handle),
+    AvatarsUpdate(avatars::Response),
 
     AddSpaceRoom {
         space: OwnedRoomId,
@@ -44,15 +39,16 @@ pub enum Message {
 #[derive(Debug, Clone)]
 pub struct Page {
     client: matrix_sdk::Client,
+    messenger: AppMessenger,
 
-    room_avatars: HashMap<OwnedRoomId, image::Handle>,
+    room_avatars: HashMap<OwnedRoomId, Option<image::Handle>>,
     current_space: Option<OwnedRoomId>,
     current_room: Option<OwnedRoomId>,
 
     verif_worker: verification::Worker,
     messages_worker: messages::Worker,
+    avatars_worker: avatars::Worker,
 
-    synced: HashMap<OwnedRoomId, bool>,
     messages: HashMap<OwnedRoomId, Vec<RenderedMessage>>,
 
     text: String,
@@ -61,11 +57,17 @@ pub struct Page {
 }
 
 impl Page {
-    pub fn from_client(client: &matrix_sdk::Client) -> Self {
+    pub fn boot(init: AppMessenger, client: matrix_sdk::Client) -> (Self, Task<Message>) {
+        (Self::from_client(init, client), Task::none())
+    }
+
+    fn from_client(messenger: AppMessenger, client: matrix_sdk::Client) -> Self {
         let verif_worker = verification::Worker::from_client(client.clone());
         let messages_worker = messages::Worker::from_client(client.clone());
+        let avatars_worker = avatars::Worker::from_client(client.clone());
         Self {
-            client: client.clone(),
+            client,
+            messenger,
 
             room_avatars: HashMap::new(),
             current_space: None,
@@ -77,8 +79,7 @@ impl Page {
 
             verif_worker,
             messages_worker,
-
-            synced: HashMap::new(),
+            avatars_worker,
 
             messages: HashMap::new(),
             text: String::new(),
@@ -106,51 +107,11 @@ impl ViewLike<PageMessage> for Page {
                 |d| d.take().subscription(),
             )
             .map(Message::MessagesUpdate),
-            Subscription::run_with(Smuggle::new("thumbnail-worker", self.client.clone()), |d| {
-                let client = d.take();
-                stream::channel(64, |mut s| async move {
-                    let mut retrieved = HashSet::<OwnedRoomId>::new();
-                    let (mut rooms, mut stream) = client.rooms_stream();
-
-                    let mut retrieve_avatars =
-                        async |s: &mut mpsc::Sender<Message>, rooms: Vec<Room>| {
-                            for room in &rooms {
-                                if !retrieved.insert(room.room_id().to_owned()) {
-                                    continue;
-                                }
-
-                                let Ok(Some(avatar)) = room
-                                    .avatar(MediaFormat::Thumbnail(MediaThumbnailSettings {
-                                        method: matrix_sdk::ruma::media::Method::Scale,
-                                        width: UInt::new_wrapping(36),
-                                        height: UInt::new_wrapping(36),
-                                        animated: false,
-                                    }))
-                                    .await
-                                else {
-                                    continue;
-                                };
-
-                                s.send(Message::RoomAvatar(
-                                    room.room_id().to_owned(),
-                                    Handle::from_bytes(avatar),
-                                ))
-                                .await
-                                .ok();
-                            }
-                        };
-
-                    retrieve_avatars(&mut s, rooms.iter().cloned().collect()).await;
-
-                    while let Some(updates) = stream.next().await {
-                        for update in updates {
-                            update.apply(&mut rooms);
-                        }
-
-                        retrieve_avatars(&mut s, rooms.iter().cloned().collect()).await;
-                    }
-                })
-            }),
+            Subscription::run_with(
+                Smuggle::new("avatars-worker", self.avatars_worker.clone()),
+                |d| d.take().subscription(),
+            )
+            .map(Message::AvatarsUpdate),
         ])
     }
 
@@ -181,18 +142,15 @@ impl ViewLike<PageMessage> for Page {
                 self.text = m;
                 Task::none()
             }
+            Message::OpenSettings => {
+                self.messenger
+                    .open_modal(Box::new(modal::settings::Modal::boot));
+                Task::none()
+            }
             Message::SyncUpdate(message) => match message {
                 sliding_sync::Response::UpdateRooms(_room_ids) => Task::none(),
             },
             Message::VerificationUpdate(_message) => Task::none(),
-            Message::RoomSynced(room_id, synced) => {
-                self.synced.insert(room_id, synced);
-                Task::none()
-            }
-            Message::RoomAvatar(room_id, avatar) => {
-                self.room_avatars.insert(room_id, avatar);
-                Task::none()
-            }
             Message::MessagesUpdate(response) => {
                 match response {
                     messages::Response::Messages(room_id, messages) => {
@@ -209,6 +167,12 @@ impl ViewLike<PageMessage> for Page {
                 }
                 Task::none()
             }
+            Message::AvatarsUpdate(response) => match response {
+                avatars::Response::RoomAvatar(room_id, avatar) => {
+                    self.room_avatars.insert(room_id, avatar);
+                    Task::none()
+                }
+            },
             Message::UrlClicked(_url) => todo!(),
         }
     }

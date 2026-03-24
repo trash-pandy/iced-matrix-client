@@ -2372,6 +2372,7 @@ name = "iced-matrix-client"
 version = "0.1.0"
 dependencies = [
  "enum_dispatch",
+ "eyeball-im",
  "futures-util",
  "iced",
  "iced_winit",

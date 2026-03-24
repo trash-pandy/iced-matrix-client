@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use enum_dispatch::enum_dispatch;
 use iced::{Element, Subscription, Task};
 
-use crate::app::{Init, IntoOrPanic, ViewLike};
+use crate::app::{AppMessenger, IntoOrPanic, ViewLike};
 use crate::name_of_trait;
 
 pub mod chat;
@@ -43,13 +43,13 @@ impl<T: ViewLike<PageMessage>> PageAdapt for T {
     }
 }
 
-pub trait BootPageFn: Sync + Send + FnMut(Init) -> (Page, Task<PageMessage>) {
+pub trait BootPageFn: Sync + Send + FnMut(AppMessenger) -> (Page, Task<PageMessage>) {
     fn clone_box(&self) -> Box<dyn BootPageFn>;
 }
 
 impl<T> BootPageFn for T
 where
-    T: 'static + FnMut(Init) -> (Page, Task<PageMessage>) + Clone + Sync + Send,
+    T: 'static + FnMut(AppMessenger) -> (Page, Task<PageMessage>) + Clone + Sync + Send,
 {
     fn clone_box(&self) -> Box<dyn BootPageFn> {
         Box::new(self.clone())

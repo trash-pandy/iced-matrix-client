@@ -9,11 +9,10 @@ use matrix_sdk::config::SyncSettings;
 use matrix_sdk::ruma::{OwnedDeviceId, OwnedUserId};
 use matrix_sdk::{SessionMeta, SessionTokens};
 use serde::{Deserialize, Serialize};
-use tokio::sync::broadcast;
 use zeroize::Zeroizing;
 
-use crate::app::{AppMessage, Init, ViewLike};
-use crate::extensions::ColumnExt;
+use crate::app::{AppMessenger, ViewLike};
+use crate::extensions::PushMaybe;
 use crate::page::{self, PageMessage};
 use crate::styling::{
     FONT_MEDIUM, SPACING_LARGE, SPACING_MEDIUM, TEXT_LARGE, TEXT_SMALL, labelled,
@@ -38,18 +37,18 @@ pub struct Page {
     username: String,
     password: Zeroizing<String>,
     error: Option<String>,
-    app_sink: broadcast::Sender<AppMessage>,
+    messenger: AppMessenger,
     logging_in: bool,
 }
 
 impl Page {
-    pub fn new(init: Init) -> (Self, Task<Message>) {
+    pub fn new(messenger: AppMessenger) -> (Self, Task<Message>) {
         let page = Self {
             homeserver: String::new(),
             username: String::new(),
             password: Zeroizing::default(),
             error: None,
-            app_sink: init.app_sink,
+            messenger,
             logging_in: true,
         };
 
@@ -163,11 +162,8 @@ impl ViewLike<PageMessage> for Page {
                 })
             }
             Message::DoneLogin(client) => {
-                self.app_sink
-                    .send(AppMessage::SwitchPage(Box::new(move |_init| {
-                        (page::chat::Page::from_client(&client).into(), Task::none())
-                    })))
-                    .ok();
+                self.messenger
+                    .switch_page(move |init| page::chat::Page::boot(init, client.clone()));
                 Task::none()
             }
             Message::Error(e) => {

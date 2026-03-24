@@ -1,7 +1,17 @@
+use std::sync::RwLock;
+
 use iced::widget::{column, text};
 use iced::{Element, Font, Pixels, Theme};
 
-pub const APP_THEME: Theme = Theme::TokyoNightStorm;
+static APP_THEME: RwLock<Theme> = RwLock::new(Theme::TokyoNightStorm);
+
+pub fn get_app_theme() -> Theme {
+    APP_THEME.read().unwrap().clone()
+}
+
+pub fn set_app_theme(theme: Theme) {
+    *APP_THEME.write().unwrap() = theme;
+}
 
 pub const FONT_BOLD: Font = Font {
     family: iced::font::Family::Name("Ubuntu Sans"),

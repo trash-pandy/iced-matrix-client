@@ -21,9 +21,7 @@ macro_rules! msg_adapter_impl {
 #[macro_export]
 macro_rules! name_of_trait {
     ($t:ident) => {{
-        let _ = {
-            let _: &dyn $t;
-        };
+        let _: &dyn $t;
         stringify!($t)
     }};
 }
