@@ -1,11 +1,11 @@
 use std::fmt::Debug;
 
 use futures_util::SinkExt;
-use iced::Length::Shrink;
+use iced::Length::Fill;
 use iced::event::Event;
 use iced::futures::channel::mpsc;
 use iced::keyboard::{self, key};
-use iced::widget::{Container, Stack, operation};
+use iced::widget::{Container, Stack, opaque, operation};
 use iced::{Element, Executor, Font, Program, Renderer, Subscription, Task, Theme, stream, window};
 use tokio::sync::broadcast;
 
@@ -234,12 +234,9 @@ impl Program for IcedMatrixClient {
     ) -> Element<'a, Self::Message, Self::Theme, Self::Renderer> {
         Stack::new()
             .push(state.page.adapt_view().map(Into::into))
-            .push_maybe(
-                state
-                    .modal
-                    .as_ref()
-                    .map(|modal| Container::new(modal.adapt_view().map(Into::into)).center(Shrink)),
-            )
+            .push_maybe(state.modal.as_ref().map(|modal| {
+                opaque(Container::new(modal.adapt_view().map(Into::into)).center(Fill))
+            }))
             .into()
     }
 }
