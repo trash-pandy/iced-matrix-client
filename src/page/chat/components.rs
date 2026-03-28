@@ -23,7 +23,7 @@ const ROOM_IMAGE_SIZE: f32 = 36.0;
 const CHANNEL_LIST_WIDTH: Pixels = Pixels(240.0);
 
 pub fn space_list(page: &Page) -> Element<'_, Message> {
-    container(
+    container(column([
         scrollable(
             page.client
                 .joined_space_rooms()
@@ -35,8 +35,16 @@ pub fn space_list(page: &Page) -> Element<'_, Message> {
         )
         .direction(scrollable::Direction::Vertical(
             scrollable::Scrollbar::hidden(),
-        )),
-    )
+        ))
+        .height(Fill)
+        .into(),
+        button(text("s").center())
+            .width(ROOM_IMAGE_SIZE)
+            .height(ROOM_IMAGE_SIZE)
+            .style(button::subtle)
+            .on_press(Message::OpenSettings)
+            .into(),
+    ]))
     .padding(SPACING_LARGE)
     .align_left(ROOM_IMAGE_SIZE + SPACING_LARGE.0 * 2.0)
     .height(Fill)

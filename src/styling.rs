@@ -1,7 +1,7 @@
 use std::sync::RwLock;
 
 use iced::widget::{column, text};
-use iced::{Element, Font, Pixels, Theme};
+use iced::{Color, Element, Font, Pixels, Shadow, Theme, Vector};
 
 static APP_THEME: RwLock<Theme> = RwLock::new(Theme::TokyoNightStorm);
 
@@ -34,6 +34,12 @@ pub const SPACING_SMALL: Pixels = Pixels(2.0);
 pub const TEXT_SMALL: Pixels = Pixels(14.0);
 pub const TEXT_MED: Pixels = Pixels(17.0);
 pub const TEXT_LARGE: Pixels = Pixels(21.0);
+
+pub const MODAL_SHADOW: Shadow = Shadow {
+    color: Color::from_rgba(0.0, 0.0, 0.0, 0.6),
+    offset: Vector::new(0.0, 6.0),
+    blur_radius: 24.0,
+};
 
 pub fn labelled<'a, 'ti: 'a, 't: 'a, M: 'a>(
     label: impl text::IntoFragment<'t>,
