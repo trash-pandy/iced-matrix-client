@@ -7,16 +7,19 @@ use crate::app::{AppMessenger, IntoOrPanic, ViewLike};
 use crate::name_of_trait;
 
 pub mod settings;
+pub mod verification;
 
 #[derive(Debug, Clone)]
 #[enum_dispatch]
 pub enum Modal {
     Settings(settings::Modal),
+    Verification(verification::Modal),
 }
 
 #[derive(Debug, Clone)]
 pub enum ModalMessage {
     Settings(settings::Message),
+    Verification(verification::Message),
 }
 
 #[enum_dispatch(Modal)]
