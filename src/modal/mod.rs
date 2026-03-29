@@ -10,7 +10,7 @@ pub mod settings;
 pub mod verification;
 
 #[derive(Debug, Clone)]
-#[enum_dispatch]
+#[enum_dispatch(ModalAdapt)]
 pub enum Modal {
     Settings(settings::Modal),
     Verification(verification::Modal),
@@ -22,7 +22,7 @@ pub enum ModalMessage {
     Verification(verification::Message),
 }
 
-#[enum_dispatch(Modal)]
+#[enum_dispatch]
 pub trait ModalAdapt {
     fn adapt_subscription(&self) -> Subscription<ModalMessage>;
     fn adapt_update(&mut self, message: ModalMessage) -> Task<ModalMessage>;

@@ -10,7 +10,7 @@ pub mod chat;
 pub mod login;
 
 #[derive(Debug, Clone)]
-#[enum_dispatch]
+#[enum_dispatch(PageAdapt)]
 pub enum Page {
     Login(login::Page),
     Chat(chat::Page),
@@ -22,7 +22,7 @@ pub enum PageMessage {
     Chat(chat::Message),
 }
 
-#[enum_dispatch(Page)]
+#[enum_dispatch]
 pub trait PageAdapt {
     fn adapt_subscription(&self) -> Subscription<PageMessage>;
     fn adapt_update(&mut self, message: PageMessage) -> Task<PageMessage>;

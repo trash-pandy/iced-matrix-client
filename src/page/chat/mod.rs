@@ -180,7 +180,7 @@ impl ViewLike<PageMessage> for Page {
     fn view(&self) -> Element<'_, Self::Message> {
         Row::new()
             .push(components::space_list(self))
-            .push(components::channel_list(self))
+            .push(components::room_list(self))
             .push(components::room_pane(self))
             .into()
     }

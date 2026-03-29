@@ -51,7 +51,7 @@ pub fn space_list(page: &Page) -> Element<'_, Message> {
     .into()
 }
 
-pub fn channel_list(page: &Page) -> Element<'_, Message> {
+pub fn room_list(page: &Page) -> Element<'_, Message> {
     container(
         Column::new()
             .push_maybe(
