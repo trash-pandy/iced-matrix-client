@@ -30,10 +30,11 @@ pub enum Message {
     AvatarsUpdate(avatars::Response),
 
     AddSpaceRoom {
-        space: OwnedRoomId,
+        space: Option<OwnedRoomId>,
         room: OwnedRoomId,
     },
     UrlClicked(String),
+    OpenHome,
 }
 
 #[derive(Debug, Clone)]
@@ -57,8 +58,12 @@ pub struct Page {
 }
 
 impl Page {
-    pub fn boot(init: AppMessenger, client: matrix_sdk::Client) -> (Self, Task<Message>) {
-        (Self::from_client(init, client), Task::none())
+    pub fn boot(init: AppMessenger, client: &matrix_sdk::Client) -> (Self, Task<Message>) {
+        (
+            Self::from_client(init, client.clone()),
+            get_space_rooms(client, None)
+                .map(move |room| Message::AddSpaceRoom { space: None, room }),
+        )
     }
 
     fn from_client(messenger: AppMessenger, client: matrix_sdk::Client) -> Self {
@@ -121,19 +126,30 @@ impl ViewLike<PageMessage> for Page {
                 self.space_rooms.clear();
                 self.current_space = Some(room_id.clone());
 
-                get_space_rooms(&self.client, &room_id).map(move |room| Message::AddSpaceRoom {
-                    space: room_id.clone(),
-                    room,
+                get_space_rooms(&self.client, Some(&room_id)).map(move |room| {
+                    Message::AddSpaceRoom {
+                        space: Some(room_id.clone()),
+                        room,
+                    }
                 })
             }
             Message::OpenRoom(room_id) => {
                 self.current_room = Some(room_id.clone());
                 self.messages_worker
                     .send(messages::Request::LatestMessages(room_id));
+
                 Task::none()
             }
+            Message::OpenHome => {
+                self.space_rooms.clear();
+                self.current_space = None;
+                self.current_room = None;
+
+                get_space_rooms(&self.client, None)
+                    .map(move |room| Message::AddSpaceRoom { space: None, room })
+            }
             Message::AddSpaceRoom { space, room } => {
-                if self.current_space == Some(space) {
+                if self.current_space == space {
                     self.space_rooms.push(room);
                 }
                 Task::none()

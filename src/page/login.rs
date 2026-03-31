@@ -163,7 +163,7 @@ impl ViewLike<PageMessage> for Page {
             }
             Message::DoneLogin(client) => {
                 self.messenger
-                    .switch_page(move |init| page::chat::Page::boot(init, client.clone()));
+                    .switch_page(move |init| page::chat::Page::boot(init, &client));
                 Task::none()
             }
             Message::Error(e) => {

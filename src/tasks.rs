@@ -2,10 +2,13 @@ use futures_util::{StreamExt, pin_mut};
 use iced::Task;
 use matrix_sdk::ruma::OwnedRoomId;
 
-pub fn get_space_rooms(client: &matrix_sdk::Client, space_id: &OwnedRoomId) -> Task<OwnedRoomId> {
+pub fn get_space_rooms(
+    client: &matrix_sdk::Client,
+    space_id: Option<&OwnedRoomId>,
+) -> Task<OwnedRoomId> {
     Task::batch(client.joined_rooms().iter().map(|room| {
         let room = room.clone();
-        let space_id = space_id.clone();
+        let space_id = space_id.cloned();
         Task::future(async move {
             let Ok(parent_stream) = room.parent_spaces().await else {
                 return Task::none();
@@ -16,15 +19,22 @@ pub fn get_space_rooms(client: &matrix_sdk::Client, space_id: &OwnedRoomId) -> T
                 match parent {
                     matrix_sdk::room::ParentSpace::Reciprocal(parent_space)
                     | matrix_sdk::room::ParentSpace::WithPowerlevel(parent_space) => {
-                        if parent_space.room_id() == space_id {
+                        let pid = parent_space.room_id();
+                        if space_id.as_ref().is_some_and(|v| v == pid) {
                             return Task::done(room.room_id().to_owned());
+                        } else if space_id.is_none() {
+                            return Task::none();
                         }
                     }
                     _ => {} // unverified parents
                 }
             }
 
-            Task::none()
+            if space_id.is_none() {
+                Task::done(room.room_id().to_owned())
+            } else {
+                Task::none()
+            }
         })
         .then(|v| v)
     }))

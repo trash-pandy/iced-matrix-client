@@ -25,12 +25,25 @@ const CHANNEL_LIST_WIDTH: Pixels = Pixels(240.0);
 pub fn space_list(page: &Page) -> Element<'_, Message> {
     container(column([
         scrollable(
-            page.client
-                .joined_space_rooms()
-                .iter()
-                .sorted_by_key(|v| v.room_id())
-                .map(|room| room_image(page, room, Message::OpenSpace(room.room_id().to_owned())))
-                .collect::<Column<_>>()
+            Column::new()
+                .push(space_button(
+                    text("H").center(),
+                    "Home".to_owned(),
+                    Message::OpenHome,
+                ))
+                .extend(
+                    page.client
+                        .joined_space_rooms()
+                        .iter()
+                        .sorted_by_key(|v| v.room_id())
+                        .map(|room| {
+                            space_image_button(
+                                page,
+                                room,
+                                Message::OpenSpace(room.room_id().to_owned()),
+                            )
+                        }),
+                )
                 .spacing(SPACING_LARGE),
         )
         .direction(scrollable::Direction::Vertical(
@@ -38,12 +51,11 @@ pub fn space_list(page: &Page) -> Element<'_, Message> {
         ))
         .height(Fill)
         .into(),
-        button(text("s").center())
-            .width(ROOM_IMAGE_SIZE)
-            .height(ROOM_IMAGE_SIZE)
-            .style(button::subtle)
-            .on_press(Message::OpenSettings)
-            .into(),
+        space_button(
+            text("s").center(),
+            "Settings".to_owned(),
+            Message::OpenSettings,
+        ),
     ]))
     .padding(SPACING_LARGE)
     .align_left(ROOM_IMAGE_SIZE + SPACING_LARGE.0 * 2.0)
@@ -54,7 +66,7 @@ pub fn space_list(page: &Page) -> Element<'_, Message> {
 pub fn room_list(page: &Page) -> Element<'_, Message> {
     container(
         Column::new()
-            .push_maybe(
+            .push(
                 page.current_space
                     .as_ref()
                     .and_then(|space_id| page.client.get_room(space_id.as_ref()))
@@ -64,7 +76,7 @@ pub fn room_list(page: &Page) -> Element<'_, Message> {
                             .or_else(|| room.name())
                             .or_else(|| Some(room.room_id().to_string()))
                     })
-                    .map(text),
+                    .map_or_else(|| text("home"), text),
             )
             .extend([
                 rule::horizontal(SPACING_SMALL).into(),
@@ -166,34 +178,33 @@ pub fn message(msg: &RenderedMessage) -> Element<'_, Message> {
     .into()
 }
 
-fn room_image<'a, M: 'a + Clone>(state: &Page, room: &Room, on_press: M) -> Element<'a, M> {
+fn space_image_button<'a, M: 'a + Clone>(state: &Page, room: &Room, on_press: M) -> Element<'a, M> {
     let content: Element<'a, M> = state
         .room_avatars
         .get(&room.room_id().to_owned())
         .cloned()
         .flatten()
         .map_or_else(
-            || {
-                text(room_short_name(room))
-                    .width(ROOM_IMAGE_SIZE)
-                    .height(ROOM_IMAGE_SIZE)
-                    .center()
-                    .into()
-            },
-            |handle| {
-                image(handle)
-                    .width(ROOM_IMAGE_SIZE)
-                    .height(ROOM_IMAGE_SIZE)
-                    .into()
-            },
+            || text(room_short_name(room)).center().into(),
+            |handle| image(handle).into(),
         );
+    space_button(content, room_name(room), on_press)
+}
+
+fn space_button<'a, M: 'a + Clone>(
+    content: impl Into<Element<'a, M>>,
+    tooltip_content: String,
+    on_press: M,
+) -> Element<'a, M> {
     tooltip(
         button(content)
             .padding(0)
             .clip(true)
-            .style(room_image_button_style)
+            .style(space_image_button_style)
+            .width(ROOM_IMAGE_SIZE)
+            .height(ROOM_IMAGE_SIZE)
             .on_press(on_press),
-        container(text(room_name(room)))
+        container(text(tooltip_content))
             .padding(SPACING_MEDIUM)
             .style(container::secondary),
         tooltip::Position::Right,
@@ -201,7 +212,7 @@ fn room_image<'a, M: 'a + Clone>(state: &Page, room: &Room, on_press: M) -> Elem
     .into()
 }
 
-fn room_image_button_style(theme: &Theme, status: button::Status) -> button::Style {
+fn space_image_button_style(theme: &Theme, status: button::Status) -> button::Style {
     let mut style = button::secondary(theme, status);
     let palette = theme.extended_palette();
     style.border = style.border.rounded(ROOM_IMAGE_SIZE);

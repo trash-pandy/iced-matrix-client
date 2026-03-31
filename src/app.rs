@@ -91,12 +91,12 @@ impl AppMessenger {
     }
 
     pub fn open_modal<
-        P: Into<Modal>,
-        M: 'static + Into<ModalMessage> + Sync + Send,
-        F: 'static + FnMut(Self) -> (P, Task<M>) + Sync + Send + Clone,
+        IntoModal: Into<Modal>,
+        IntoMessage: 'static + Into<ModalMessage> + Sync + Send,
+        IntoBootModalFn: 'static + FnMut(Self) -> (IntoModal, Task<IntoMessage>) + Sync + Send + Clone,
     >(
         &self,
-        mut modal: F,
+        mut modal: IntoBootModalFn,
     ) {
         self.app_sink
             .send(AppMessage::OpenModal(Box::new(move |init| {
