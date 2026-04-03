@@ -3,10 +3,11 @@ use std::string::ToString;
 use iced::Length::Fill;
 use iced::widget::text::Wrapping;
 use iced::widget::{
-    Column, button, column, container, image, markdown, rule, scrollable, space, text, text_input,
-    tooltip,
+    Column, button, column, container, image, markdown, opaque, rule, scrollable, space, text,
+    text_input, tooltip,
 };
 use iced::{Element, Pixels, Theme};
+use iced_aw::ContextMenu;
 use itertools::Itertools;
 use matrix_sdk::Room;
 use unicode_segmentation::UnicodeSegmentation;
@@ -31,6 +32,7 @@ pub fn space_list(page: &Page) -> Element<'_, Message> {
                     "Home".to_owned(),
                     Message::OpenHome,
                 ))
+                .push(rule::horizontal(2))
                 .extend(
                     page.client
                         .joined_space_rooms()
@@ -66,7 +68,7 @@ pub fn space_list(page: &Page) -> Element<'_, Message> {
 pub fn room_list(page: &Page) -> Element<'_, Message> {
     container(
         Column::new()
-            .push(
+            .extend([
                 page.current_space
                     .as_ref()
                     .and_then(|space_id| page.client.get_room(space_id.as_ref()))
@@ -76,22 +78,15 @@ pub fn room_list(page: &Page) -> Element<'_, Message> {
                             .or_else(|| room.name())
                             .or_else(|| Some(room.room_id().to_string()))
                     })
-                    .map_or_else(|| text("home"), text),
-            )
-            .extend([
+                    .map_or_else(|| text("home"), text)
+                    .into(),
                 rule::horizontal(SPACING_SMALL).into(),
                 scrollable(
                     page.space_rooms
                         .iter()
                         .filter_map(|room| page.client.get_room(room))
                         .sorted_by_key(|room| room.room_id().to_owned())
-                        .map(|room| {
-                            button(text(room_name(&room)).wrapping(Wrapping::WordOrGlyph))
-                                .style(button::subtle)
-                                .width(Fill)
-                                .on_press(Message::OpenRoom(room.room_id().to_owned()))
-                                .into()
-                        })
+                        .map(room_button)
                         .collect::<Column<_>>()
                         .spacing(SPACING_LARGE),
                 )
@@ -117,6 +112,31 @@ pub fn room_list(page: &Page) -> Element<'_, Message> {
             ..Default::default()
         }
     })
+    .into()
+}
+
+pub fn room_button<'a>(room: Room) -> Element<'a, Message> {
+    ContextMenu::new(
+        button(text(room_name(&room)).wrapping(Wrapping::WordOrGlyph))
+            .style(button::subtle)
+            .width(Fill)
+            .on_press(Message::OpenRoom(room.room_id().to_owned())),
+        move || {
+            container(opaque(column(Itertools::intersperse_with(
+                [button("open")
+                    .style(button::subtle)
+                    .width(Fill)
+                    .on_press(Message::OpenRoom(room.room_id().to_owned()))
+                    .into()]
+                .into_iter(),
+                || rule::horizontal(1).into(),
+            ))))
+            .padding(1)
+            .style(container::bordered_box)
+            .width(200)
+            .into()
+        },
+    )
     .into()
 }
 

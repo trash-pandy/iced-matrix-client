@@ -1,6 +1,7 @@
 use futures_util::{StreamExt, pin_mut};
 use iced::Task;
 use matrix_sdk::ruma::OwnedRoomId;
+use matrix_sdk::ruma::room::RoomType;
 
 pub fn get_space_rooms(
     client: &matrix_sdk::Client,
@@ -30,7 +31,7 @@ pub fn get_space_rooms(
                 }
             }
 
-            if space_id.is_none() {
+            if space_id.is_none() && room.room_type() != Some(RoomType::Space) {
                 Task::done(room.room_id().to_owned())
             } else {
                 Task::none()
